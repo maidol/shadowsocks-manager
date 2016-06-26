@@ -6,4 +6,3 @@ bower_components/
 sftp-config.json
 logs
 !logs/logfiles
-.vscode

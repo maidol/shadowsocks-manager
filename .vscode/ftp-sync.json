@@ -1,0 +1,16 @@
+{
+    "remotePath": "/root/shadowsocks-manager",
+    "host": "159.203.234.63",
+    "username": "root",
+    "password": "m19870913",
+    "port": 22,
+    "protocol": "sftp",
+    "uploadOnSave": false,
+    "passive": false,
+    "debug": false,
+    "privateKeyPath": null,
+    "ignore": [
+        "\\.vscode",
+        "\\.git"
+    ]
+}
