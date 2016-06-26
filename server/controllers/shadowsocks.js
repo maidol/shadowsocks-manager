@@ -25,7 +25,7 @@ var add = exports.add = function (server, account) {
     var socket = dgram.createSocket('udp4');
 
     var ip   = server.ip;
-    var port = server.port;
+    var port = server.port;     //--manager-address
     var accountPort = account.port;
     var password = account.password;
 
