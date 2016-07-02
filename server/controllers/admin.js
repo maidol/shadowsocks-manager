@@ -60,6 +60,7 @@ exports.addServer = function (req, res) {
     server.name = name;
     server.ip = ip;
     server.port = port;
+    serve.method = method;
 
     server.save(function(err, data) {
         if(err) {
