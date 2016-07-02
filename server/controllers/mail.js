@@ -53,11 +53,15 @@ var sendActiveMail = function() {
             }
         }, {new: true}).exec(function(err, data) {
             if(err || !data) {return;}
+            var webaddress = config.mail.webaddress;
+            if(config.express.key && config.express.cert){
+                webaddress = config.mail.webaddresshttps;
+            }
             transporter.sendMail({
                 from: '"Shadowsocks" <'+ config.mail.address +'>',
                 to: data.email,
                 subject: 'Shadowsocks激活邮件',
-                text: '您好，请点击下列链接激活您的账户：\n\n' + config.mail.webaddress + '/home/active/' + data.activeKey + '\n\n该链接15分钟内有效'
+                text: '您好，请点击下列链接激活您的账户：\n\n' + webaddress + '/home/active/' + data.activeKey + '\n\n该链接15分钟内有效'
             }, function(error, info){
                 if(error){
                     logger.warn('[' + data.activeKey + '][' + data.email + ']激活码发送失败\n' + error);
