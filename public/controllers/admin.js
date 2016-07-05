@@ -80,10 +80,15 @@ app.controller('AdminIndexController', function($scope, $http, $state) {
             });
         };
         $scope.init();
-        $scope.$watch('publicInfo', function() {
-            $scope.init();
-        }, true);
+        // $scope.$watch('publicInfo', function() {
 
+        //     $scope.init();
+        // }, true);
+        $scope.$on('initPublicInfo', function(event, data) {
+            if(data === 'flow') {
+                $scope.init();
+            }
+        });
         $scope.toUser = function(userName) {
             $state.go('admin.userPage', {userName: userName});
         };
@@ -323,9 +328,11 @@ app.controller('AdminIndexController', function($scope, $http, $state) {
                     name: $stateParams.serverName,
                     port: port
                 }}).then(function(success) {
-                    // $scope.server.account = success.data.account;
                     $state.go('admin.serverPage', {serverName: $stateParams.serverName});
-                    $scope.initPublicInfo();
+                    // $scope.initPublicInfo();
+                    $scope.server.account = $scope.server.account.filter(function(f) {
+                        return f.port !== port;
+                    });
                 }, function(error) {
                     $scope.loadingMessage({message: '删除账号失败', right: function() {
                         $scope.loading(false);
@@ -350,7 +357,7 @@ app.controller('AdminIndexController', function($scope, $http, $state) {
         };
         $scope.init();
         $scope.$on('initPublicInfo', function(event, data) {
-            if(data === 'server') {
+            if(data === 'flow') {
                 $scope.init();
             }
         });
@@ -406,7 +413,7 @@ app.controller('AdminIndexController', function($scope, $http, $state) {
         };
         $scope.init();
         $scope.$on('initPublicInfo', function(event, data) {
-            if(data === 'server') {
+            if(data === 'flow') {
                 $scope.init();
             }
         });
@@ -746,14 +753,31 @@ app.controller('AdminIndexController', function($scope, $http, $state) {
 
         $scope.flow = [
             {number: 50 * 1000 * 1000, name:'50 MB'},
+            {number: 80 * 1000 * 1000, name:'80 MB'},
             {number: 100 * 1000 * 1000, name:'100 MB'},
-            {number: 200 * 1000 * 1000, name:'200 MB'}
+            {number: 200 * 1000 * 1000, name:'200 MB'},
+            {number: 300 * 1000 * 1000, name:'300 MB'}
         ];
         $scope.time = [
             {number: 2 * 3600, name: '2小时'},
             {number: 4 * 3600, name: '4小时'},
             {number: 8 * 3600, name: '8小时'},
-            {number: 12 * 3600, name: '12小时'}
+            {number: 12 * 3600, name: '12小时'},
+            {number: 18 * 3600, name: '18小时'}
+        ];
+        $scope.osFlow = [
+            {name: '10 MB', value: 10 * 1000 * 1000},
+            {name: '20 MB', value: 20 * 1000 * 1000},
+            {name: '40 MB', value: 40 * 1000 * 1000},
+            {name: '80 MB', value: 80 * 1000 * 1000},
+            {name: '160 MB', value: 160 * 1000 * 1000}
+        ];
+        $scope.osTime = [
+            {name: '1小时', value: 1 * 3600},
+            {name: '2小时', value: 2 * 3600},
+            {name: '4小时', value: 4 * 3600},
+            {name: '8小时', value: 8 * 3600},
+            {name: '16小时', value: 16 * 3600}
         ];
 
         $http.get('/api/admin/option').then(function(success) {
@@ -765,6 +789,16 @@ app.controller('AdminIndexController', function($scope, $http, $state) {
             $http.post('/api/admin/option', {
                 name: 'freeServer',
                 value: $scope.options.freeServer
+            }).then(function(success) {
+                $http.post('/api/admin/option', {
+                    name: 'signInEnable',
+                    value: $scope.options.signInEnable
+                });
+            }).then(function(success) {
+                $http.post('/api/admin/option', {
+                    name: 'oneSecond',
+                    value: $scope.options.oneSecond
+                });
             }).then(function(success) {
                 $scope.loadingMessage({
                     message: '设置成功',

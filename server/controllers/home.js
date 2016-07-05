@@ -10,6 +10,9 @@ var User = mongoose.model('User');
 var mail = require('./mail');
 var freeAccount = require('./freeAccount');
 
+var Option = mongoose.model('Option');
+
+var moment = require('moment');
 var crypto = require('crypto');
 var md5 = (text) => crypto.createHash('md5').update(text).digest('hex');
 
@@ -17,24 +20,31 @@ var createPassword = (password, username) => md5(password + username);
 
 
 exports.signup = function(req, res) {
-    var email = req.body.username;
-    var password = req.body.password;
-    var fingerprint = req.body.fingerprint;
-    if(!email || !password) {return res.status(400).end('请求数据不合法');}
-    if(password.length < 6) {return res.status(400).end('密码长度太短');}
-    User.findOne({email: email}).exec(function(err, data) {
-        if(err) {return res.status(500).end('数据库操作错误：' + err);}
-        else if(data) {return res.status(403).end('该用户已注册');}
-        var user = new User();
-        user.email = email;
-        user.password = createPassword(password, email);
-        user.signupIp = req.connection.remoteAddress;
-        user.signupFp = fingerprint;
-        user.save(function(err, data) {
+    Option.findOne({
+        name: 'signInEnable'
+    }).exec((err, signInEnable) => {
+        if(err || !signInEnable || !signInEnable.value) {
+            return res.status(400).end('当前时段尚未开放注册');
+        }   
+        var email = req.body.username;
+        var password = req.body.password;
+        var fingerprint = req.body.fingerprint;
+        if(!email || !password) {return res.status(400).end('请求数据不合法');}
+        if(password.length < 6) {return res.status(400).end('密码长度太短');}
+        User.findOne({email: email}).exec(function(err, data) {
             if(err) {return res.status(500).end('数据库操作错误：' + err);}
-            mail.addMail(email, 1);
-            logger.info('[' + email + ']注册成功');
-            return res.send('success');
+            else if(data) {return res.status(403).end('该用户已注册');}
+            var user = new User();
+            user.email = email;
+            user.password = createPassword(password, email);
+            user.signupIp = req.connection.remoteAddress;
+            user.signupFp = fingerprint;
+            user.save(function(err, data) {
+                if(err) {return res.status(500).end('数据库操作错误：' + err);}
+                mail.addMail(email, 1);
+                logger.info('[' + email + ']注册成功');
+                return res.send('success');
+            });
         });
     });
 };
@@ -83,7 +93,7 @@ exports.activeEmail = function(req, res) {
     User.findOneAndUpdate({
         isActive: false,
         activeKey: activeKey,
-        sendEmailTime: {$gt: new Date(+new Date() - 15 * 60 * 1000)}
+        sendEmailTime: {$gt: moment().add(-60, 'minute').toDate()}
     }, {
         $set: {
             isActive: true
@@ -102,5 +112,66 @@ exports.activeEmail = function(req, res) {
 exports.getVersion = (req, res) => res.send(version);
 
 exports.findPassword = (req, res) => {
-    
+    var email = req.body.username;
+    User.findOne({
+        email: email,
+        isAdmin: false
+    }).exec((err, user) => {
+        if(err) {return res.status(500).end('数据库错误');}
+        if(!user) {return res.status(403).end('用户不存在');}
+        mail.addMail(email, 2);
+        return res.send('success');
+    });
+};
+
+exports.findPasswordUser = (req, res) => {
+    req.checkQuery('key', '请求数据格式错误').notEmpty();
+    var errors = req.validationErrors();
+    if(errors) {return res.status(400).end(errors[0].msg);}
+    var key = req.query.key;
+    User.findOne({
+        isAdmin: false,
+        resetPasswordKey: key
+    }).exec((err, user) => {
+        if(err) {return res.status(500).end('数据库错误');}
+        if(!user) {return res.status(403).end('无效的key');}
+        return res.send('success');
+    });
+};
+
+exports.resetPassword = (req, res) => {
+    req.checkBody('key', '请求数据格式错误').notEmpty();
+    req.checkBody('password', '请求数据格式错误').notEmpty();
+    var errors = req.validationErrors();
+    if(errors) {return res.status(400).end(errors[0].msg);}
+    var key = req.body.key;
+    var password = req.body.password;
+    // if(!key || !password) {return res.status(400).end('请求数据格式错误');}
+    User.findOne({
+        isAdmin: false,
+        resetPasswordKey: key,
+    }).exec((err, user) => {
+        if(err) {return res.status(500).end('数据库错误');}
+        if(!user) {return res.status(403).end('无效的key');}
+        User.findOneAndUpdate({
+            isAdmin: false,
+            resetPasswordKey: key,
+            sendResetKeyTime: {
+                $gte: moment().add(-15, 'minute').toDate()
+            }
+        }, {
+            $set: {
+                password: md5(password + user.email)
+            },
+            $unset: {
+                resetPasswordKey: '',
+                sendResetKeyTime: ''
+            }
+        }).exec((err, user) => {
+            if(err) {return res.status(500).end('数据库错误');}
+            if(!user) {return res.status(403).end('无效的key');}
+            logger.info('[' + user.email + ']重置密码成功');
+            return res.send('success');
+        });
+    });
 };

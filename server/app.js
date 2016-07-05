@@ -1,5 +1,6 @@
 var version = require('../package.json').version;
 var express = global.express = require('express');
+var expressValidator = require('express-validator');
 var app = global.app = express();
 var compression = require('compression');
 var config = require('../config').conf;
@@ -72,7 +73,13 @@ var log4js = exports.log4js = function(cb) {
             pattern: '-yyyy-MM-dd',
             alwaysIncludePattern: true,
             category: 'express'
-        }]
+        }, {
+            type: 'dateFile',
+            filename: 'logs/system.log',
+            pattern: '-yyyy-MM-dd',
+            alwaysIncludePattern: true,
+            category: 'system'
+        },]
     });
     cb(null);
 };
@@ -92,7 +99,6 @@ exports.db = function (cb) {
 
 
 exports.express = function(cb) {
-
     if(config.express.key && config.express.cert) {
         var httpskey = fs.readFileSync(config.express.key);
         var httpscert = fs.readFileSync(config.express.cert);
@@ -100,6 +106,7 @@ exports.express = function(cb) {
     // app.enable('trust proxy');
     var bodyParser = require('body-parser');
     app.use(bodyParser.json());
+    app.use(expressValidator());
     app.use(compression());
     app.use(bodyParser.urlencoded({ extended: true }));
 

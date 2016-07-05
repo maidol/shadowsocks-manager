@@ -91,7 +91,10 @@ app.controller('AdminMainController', function($scope, $http, $state, $mdSidenav
 
         $scope.loading = function(isLoading) {
             if(isLoading) {
-                $mdDialog.show(dialog);
+                if($scope.publicInfo.isLoading) {return;}
+                // $mdDialog.cancel().finally(function() {
+                    $mdDialog.show(dialog);
+                // });
             } else {
                 var waitToCancel = $scope.$watch('publicInfo.isLoading', function() {
                     if($scope.publicInfo.isLoading) {
@@ -135,10 +138,8 @@ app.controller('AdminMainController', function($scope, $http, $state, $mdSidenav
         $scope.initPublicInfo = function(options) {
             if($scope.publicInfo.messageData) {return;}
             if(!options) {options = {
-                type: ['server','user', 'flow', 'code'],
                 loading: true
             };}
-            if(!options.type) {options.type = ['server','user', 'flow', 'code'];}
 
             if(!options.loading && $scope.publicInfo.lastUpdate) {
                 var time = +new Date() - $scope.publicInfo.lastUpdate;
@@ -146,28 +147,13 @@ app.controller('AdminMainController', function($scope, $http, $state, $mdSidenav
             }
             $scope.loading(options.loading);
             var promises = [];
-            if(options.type.indexOf('server') >= 0) {
-                promises[0] = $http.get('/api/admin/server');
-            } else {
-                promises[0] = undefined;
-            }
-            if(options.type.indexOf('user') >= 0) {
-                promises[1] = $http.get('/api/admin/user');
-            } else {
-                promises[1] = undefined;
-            }
-            if(options.type.indexOf('flow') >= 0) {
-                promises[2] = $http.get('/api/admin/flow');
-            } else {
-                promises[2] = undefined;
-            }
-            if(options.type.indexOf('code') >= 0) {
-                promises[3] = $http.get('/api/admin/code');
-            } else {
-                promises[3] = undefined;
-            }
+            
+            promises[0] = $http.get('/api/admin/server');
+            promises[1] = $http.get('/api/admin/user');
+            promises[2] = $http.get('/api/admin/flow');
+            promises[3] = $http.get('/api/admin/code');
+            
             $q.all(promises).then(function(success) {
-                $scope.loading(false);
                 $scope.publicInfo.lastUpdate = new Date();
                 if(success[0]) {
                     $scope.publicInfo.servers = success[0].data;
@@ -199,7 +185,8 @@ app.controller('AdminMainController', function($scope, $http, $state, $mdSidenav
                 if(success[3]) {
                     $scope.publicInfo.codes = success[3].data;
                 }
-            }, function(error) {
+                if(options.loading) {$scope.loading(false);}
+            }).catch(function(error) {
                 if(error.status === 401) {
                     $window.location.href = '/';
                 }
